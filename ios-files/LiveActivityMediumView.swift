@@ -57,11 +57,10 @@ struct LiveActivityMediumView: View {
             .fontWeight(.bold)
             .monospacedDigit()
             .foregroundStyle(titleColor)
-          Text("スプリット平均ペース (/km)")
-            .font(.system(size: 9))
+          Text("平均ペース (/km)")
+            .font(.caption)
             .foregroundStyle(subtitleColor)
             .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
 
