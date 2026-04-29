@@ -7,119 +7,76 @@ struct LiveActivityMediumView: View {
   @Binding var imageContainerSize: CGSize?
   let alignedImage: (String, HorizontalAlignment, Bool) -> AnyView
 
-  private var hasImage: Bool {
-    contentState.imageName != nil
-  }
-
-  private var isLeftImage: Bool {
-    (attributes.imagePosition ?? "right").hasPrefix("left")
-  }
-
-  private var isStretch: Bool {
-    (attributes.imagePosition ?? "right").contains("Stretch")
-  }
-
-  private var effectiveStretch: Bool {
-    isStretch && hasImage
-  }
-
-  private var progressViewTint: Color? {
-    attributes.progressViewTint.map { Color(hex: $0) }
-  }
-
   var body: some View {
-    let padding = attributes.resolvedPadding(defaultPadding: 24)
+    let padding = attributes.resolvedPadding(defaultPadding: 16)
+    let titleColor = Color(hex: attributes.titleColor ?? "#FFFFFF")
+    let subtitleColor = Color(hex: attributes.subtitleColor ?? "#AAAAAA")
 
-    let _ = contentState.logSegmentedProgressWarningIfNeeded()
-
-    VStack(alignment: .leading) {
-      HStack(alignment: .center) {
-        if hasImage, isLeftImage {
-          if let imageName = contentState.imageName {
-            alignedImage(imageName, .leading, false)
-          }
-        }
-
-        VStack(alignment: .leading, spacing: 2) {
-          Text(contentState.title)
-            .font(.title2)
-            .fontWeight(.semibold)
-            .modifier(ConditionalForegroundViewModifier(color: attributes.titleColor))
-
-          if let subtitle = contentState.subtitle {
-            Text(subtitle)
-              .font(.title3)
-              .modifier(ConditionalForegroundViewModifier(color: attributes.subtitleColor))
-          }
-
-          if effectiveStretch {
-            if contentState.hasSegmentedProgress,
-               let currentStep = contentState.currentStep,
-               let totalSteps = contentState.totalSteps,
-               totalSteps > 0
-            {
-              SegmentedProgressView(
-                currentStep: currentStep,
-                totalSteps: totalSteps,
-                activeColor: attributes.segmentActiveColor,
-                inactiveColor: attributes.segmentInactiveColor
-              )
-            } else if let startDate = contentState.elapsedTimerStartDateInMilliseconds {
-              ElapsedTimerText(
-                startTimeMilliseconds: startDate,
-                color: attributes.progressViewLabelColor.map { Color(hex: $0) }
-              )
-              .font(.title3)
-              .fontWeight(.medium)
-            } else if let date = contentState.timerEndDateInMilliseconds {
-              ProgressView(timerInterval: Date.toTimerInterval(miliseconds: date))
-                .tint(progressViewTint)
-                .modifier(ConditionalForegroundViewModifier(color: attributes.progressViewLabelColor))
-            } else if let progress = contentState.progress {
-              ProgressView(value: progress)
-                .tint(progressViewTint)
-                .modifier(ConditionalForegroundViewModifier(color: attributes.progressViewLabelColor))
-            }
-          }
-        }.layoutPriority(1)
-
-        if hasImage, !isLeftImage {
-          if let imageName = contentState.imageName {
-            alignedImage(imageName, .trailing, false)
-          }
+    VStack(alignment: .leading, spacing: 8) {
+      // ヘッダー: アクティビティ名 + アイコン
+      HStack {
+        Text("ランニング")
+          .font(.subheadline)
+          .fontWeight(.semibold)
+          .foregroundStyle(titleColor)
+        Spacer()
+        if let imageName = contentState.imageName {
+          Image.dynamic(assetNameOrPath: imageName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 28, height: 28)
         }
       }
 
-      if !effectiveStretch {
-        if contentState.hasSegmentedProgress,
-           let currentStep = contentState.currentStep,
-           let totalSteps = contentState.totalSteps,
-           totalSteps > 0
-        {
-          SegmentedProgressView(
-            currentStep: currentStep,
-            totalSteps: totalSteps,
-            activeColor: attributes.segmentActiveColor,
-            inactiveColor: attributes.segmentInactiveColor
-          )
-        } else if let startDate = contentState.elapsedTimerStartDateInMilliseconds {
-          ElapsedTimerText(
-            startTimeMilliseconds: startDate,
-            color: attributes.progressViewLabelColor.map { Color(hex: $0) }
-          )
-          .font(.title2)
-          .fontWeight(.semibold)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.top, 4)
-        } else if let date = contentState.timerEndDateInMilliseconds {
-          ProgressView(timerInterval: Date.toTimerInterval(miliseconds: date))
-            .tint(progressViewTint)
-            .modifier(ConditionalForegroundViewModifier(color: attributes.progressViewLabelColor))
-        } else if let progress = contentState.progress {
-          ProgressView(value: progress)
-            .tint(progressViewTint)
-            .modifier(ConditionalForegroundViewModifier(color: attributes.progressViewLabelColor))
+      // 3カラム指標
+      HStack(alignment: .top, spacing: 0) {
+        // カラム1: 経過時間
+        VStack(alignment: .center, spacing: 2) {
+          if let startDate = contentState.elapsedTimerStartDateInMilliseconds {
+            ElapsedTimerText(startTimeMilliseconds: startDate, color: titleColor)
+              .font(.title2)
+              .fontWeight(.bold)
+              .monospacedDigit()
+          } else {
+            Text("0:00")
+              .font(.title2)
+              .fontWeight(.bold)
+              .monospacedDigit()
+              .foregroundStyle(titleColor)
+          }
+          Text("時間")
+            .font(.caption)
+            .foregroundStyle(subtitleColor)
         }
+        .frame(maxWidth: .infinity)
+
+        // カラム2: ペース
+        VStack(alignment: .center, spacing: 2) {
+          Text(contentState.subtitle ?? "-:--")
+            .font(.title2)
+            .fontWeight(.bold)
+            .monospacedDigit()
+            .foregroundStyle(titleColor)
+          Text("スプリット平均ペース (/km)")
+            .font(.system(size: 9))
+            .foregroundStyle(subtitleColor)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+
+        // カラム3: 距離
+        VStack(alignment: .center, spacing: 2) {
+          Text(contentState.title)
+            .font(.title2)
+            .fontWeight(.bold)
+            .monospacedDigit()
+            .foregroundStyle(titleColor)
+          Text("距離 (km)")
+            .font(.caption)
+            .foregroundStyle(subtitleColor)
+        }
+        .frame(maxWidth: .infinity)
       }
     }
     .padding(padding)
